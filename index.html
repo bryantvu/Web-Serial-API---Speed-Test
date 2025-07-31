@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Serial API Performance Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .control-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+        }
+
+        .card h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn.danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        }
+
+        .btn.success {
+            background: linear-gradient(135deg, #51cf66 0%, #40c057 100%);
+        }
+
+        .status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin: 5px;
+        }
+
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status.reading {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .metric {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .data-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .data-panel {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+        }
+
+        .data-panel h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .data-content {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .chart-container {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .chart {
+            height: 300px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: flex;
+            align-items: end;
+            padding: 10px;
+            gap: 2px;
+        }
+
+        .chart-bar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px 2px 0 0;
+            min-width: 4px;
+            transition: height 0.3s ease;
+        }
+
+        .settings {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+            margin-bottom: 20px;
+        }
+
+        .settings h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #495057;
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .data-display {
+                grid-template-columns: 1fr;
+            }
+            
+            .control-panel {
+                grid-template-columns: 1fr;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Web Serial API Performance Test</h1>
+            <p>Test the speed and performance of serial device communication</p>
+        </div>
+
+        <div class="content">
+            <!-- Connection Controls -->
+            <div class="control-panel">
+                <div class="card">
+                    <h3>Connection</h3>
+                    <button id="connectBtn" class="btn">Connect to Device</button>
+                    <button id="disconnectBtn" class="btn danger" disabled>Disconnect</button>
+                    <div id="connectionStatus" class="status disconnected">Disconnected</div>
+                </div>
+
+                <div class="card">
+                    <h3>Reading Controls</h3>
+                    <button id="startReadingBtn" class="btn success" disabled>Start Reading</button>
+                    <button id="stopReadingBtn" class="btn danger" disabled>Stop Reading</button>
+                    <button id="tareBtn" class="btn" disabled>Tare Scale</button>
+                    <div id="readingStatus" class="status disconnected">Not Reading</div>
+                </div>
+
+                <div class="card">
+                    <h3>Test Controls</h3>
+                    <button id="startTestBtn" class="btn" disabled>Start Performance Test</button>
+                    <button id="stopTestBtn" class="btn danger" disabled>Stop Test</button>
+                    <button id="clearDataBtn" class="btn">Clear Data</button>
+                </div>
+            </div>
+
+            <!-- Performance Metrics -->
+            <div class="metrics-grid">
+                <div class="metric">
+                    <div id="readingsPerSecond" class="metric-value">0</div>
+                    <div class="metric-label">Readings/sec (Hz)</div>
+                </div>
+                <div class="metric">
+                    <div id="avgLatency" class="metric-value">0</div>
+                    <div class="metric-label">Avg Latency (ms)</div>
+                </div>
+                <div class="metric">
+                    <div id="minLatency" class="metric-value">0</div>
+                    <div class="metric-label">Min Latency (ms)</div>
+                </div>
+                <div class="metric">
+                    <div id="maxLatency" class="metric-value">0</div>
+                    <div class="metric-label">Max Latency (ms)</div>
+                </div>
+                <div class="metric">
+                    <div id="totalReadings" class="metric-value">0</div>
+                    <div class="metric-label">Total Readings</div>
+                </div>
+                <div class="metric">
+                    <div id="currentWeight" class="metric-value">0.000</div>
+                    <div class="metric-label">Current Weight</div>
+                </div>
+            </div>
+
+            <!-- Device Information -->
+            <div class="card" style="margin-bottom: 20px;">
+                <h3>Device Information</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div class="form-group">
+                        <label>Device ID:</label>
+                        <div id="deviceId" style="padding: 10px; background: #e9ecef; border-radius: 5px; font-family: monospace; font-weight: bold;">Not Connected</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Device Capacity:</label>
+                        <div id="deviceCapacity" style="padding: 10px; background: #e9ecef; border-radius: 5px; font-family: monospace; font-weight: bold;">Not Connected</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Device Units:</label>
+                        <div id="deviceUnits" style="padding: 10px; background: #e9ecef; border-radius: 5px; font-family: monospace; font-weight: bold;">Not Connected</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings -->
+            <div class="settings">
+                <h3>Test Settings</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div class="form-group">
+                        <label for="baudRate">Baud Rate:</label>
+                        <select id="baudRate">
+                            <option value="9600">9600</option>
+                            <option value="19200">19200</option>
+                            <option value="38400">38400</option>
+                            <option value="57600">57600</option>
+                            <option value="115200">115200</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="readInterval">Read Interval (ms):</label>
+                        <input type="number" id="readInterval" value="100" min="10" max="1000">
+                    </div>
+                    <div class="form-group">
+                        <label for="testDuration">Test Duration (seconds):</label>
+                        <input type="number" id="testDuration" value="30" min="5" max="300">
+                    </div>
+                    <div class="form-group">
+                        <label for="maxReadings">Max Readings:</label>
+                        <input type="number" id="maxReadings" value="1000" min="100" max="10000">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Display -->
+            <div class="data-display">
+                <div class="data-panel">
+                    <h3>Raw Data</h3>
+                    <div style="margin-bottom: 10px;">
+                        <button id="pauseRawDataBtn" class="btn" style="margin: 0;">Pause Logging</button>
+                        <button id="clearRawDataBtn" class="btn" style="margin: 0;">Clear Raw Data</button>
+                    </div>
+                    <div id="rawData" class="data-content"></div>
+                </div>
+                <div class="data-panel">
+                    <h3>Performance Log</h3>
+                    <div id="performanceLog" class="data-content"></div>
+                </div>
+            </div>
+
+            <!-- Latency Chart -->
+            <div class="chart-container">
+                <h3>Latency Distribution (Last 100 readings)</h3>
+                <div id="latencyChart" class="chart"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="serial-test.js"></script>
+</body>
+</html> 
